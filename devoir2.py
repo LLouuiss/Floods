@@ -7,7 +7,21 @@ pd.options.mode.copy_on_write = True
 
 file_path = 'DGH_5962_Q_DayMean.xlsx'
 
-plots = True
+verbose = False
+export_file = True
+display_plots = False
+save_plots = True
+
+
+##############  TODO  ################
+#                                    #
+# - Kolmogorov-Smirnov test          #
+# - Chi-squared 4 class test         #
+# - Verbose tests                    #
+# - Improving beauty of export file  #
+# - Improving beauty of plots        #
+#                                    #
+######################################
 
 
 #######################
@@ -44,6 +58,7 @@ def plotter(typeyear, endyear, method):
     mapper = mappers[method]
     ticks = mapper(ticks_label)
 
+    plt.figure(figsize=(8,6))
     plt.plot(data["X_i"], mapper(data["Weibull"]), marker='o', markersize=5, linestyle='', label='Empirical CDF (Weibull estimator)')
     plt.plot(data["X_i"], mapper(data[method]), label='Lognormal CDF', color='red')
     plt.yticks(ticks, ticks_label)
@@ -54,7 +69,10 @@ def plotter(typeyear, endyear, method):
     plt.grid()
     title = method + " - 1979-" + endyear + " - " + typeyear
     plt.title(title)
-    plt.show()
+    if save_plots:
+        plt.savefig("devoir2_plots/" + title.replace(" ", "_").replace(":", "") + ".pdf", dpi=300)
+    if display_plots:
+        plt.show()
 
 
 ##############
@@ -105,8 +123,55 @@ for df, params in [(calen_20, params_calen_20), (calen_25, params_calen_25), (hy
     df["Weibull"] = (df.index + 0.5) / params["n"]
     df["i_over_n"] = (df.index + 1) / params["n"]
 
+# Kolmogorov-Smirnov test
+# TODO implémenter
+
+# Chi-squared 4 class test
+# TODO implémenter
+
+# Return periods
+Q_2021 = calen_25["X_i"].max()
+
+Q_calen_20 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
+Q_calen_25 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
+Q_hydro_20 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
+
+for df, params, name in [(Q_calen_20, params_calen_20, "Calendar 2020"), (Q_calen_25, params_calen_25, "Calendar 2025"), (Q_hydro_20, params_hydro_20, "Hydro 2020")]:
+    for Tr in [10, 100, 1000, 10000]:
+        p = 1 - 1/Tr
+        Q_ln_m = stat.lognorm.ppf(p, s=np.sqrt(params["ln_m"][1]), scale=np.exp(params["ln_m"][0]))
+        Q_ln_ml = stat.lognorm.ppf(p, s=np.sqrt(params["ln_ml"][1]), scale=np.exp(params["ln_ml"][0]))
+        Q_gumbel = stat.gumbel_r.ppf(p, loc=params["gumbel"][0], scale=params["gumbel"][1])
+        df.loc[len(df)] = [Tr, Q_ln_m, Q_ln_ml, Q_gumbel]
+    Tr_2021_ln_m = 1 / (1 - stat.lognorm.cdf(Q_2021, s=np.sqrt(params["ln_m"][1]), scale=np.exp(params["ln_m"][0])))
+    Tr_2021_ln_ml = 1 / (1 - stat.lognorm.cdf(Q_2021, s=np.sqrt(params["ln_ml"][1]), scale=np.exp(params["ln_ml"][0])))
+    Tr_2021_gumbel = 1 / (1 - stat.gumbel_r.cdf(Q_2021, loc=params["gumbel"][0], scale=params["gumbel"][1]))
+    if (name == "Calendar 2020" or name == "Calendar 2025"):
+        df.loc[len(df)] = ["T_r for Q_2021", Tr_2021_ln_m, Tr_2021_ln_ml, Tr_2021_gumbel]
+
+# Exporting results to a file
+if export_file:
+    with pd.ExcelWriter('devoir2_results.xlsx') as writer:
+        params_df = pd.DataFrame({
+            "Dataset": ["Calendar 2020", "Calendar 2025", "Hydro 2020"],
+            "n": [params_calen_20["n"], params_calen_25["n"], params_hydro_20["n"]],
+            "ln_m_sigma": [np.sqrt(params_calen_20["ln_m"][1]), np.sqrt(params_calen_25["ln_m"][1]), np.sqrt(params_hydro_20["ln_m"][1])],
+            "ln_m_m": [params_calen_20["ln_m"][0], params_calen_25["ln_m"][0], params_hydro_20["ln_m"][0]],
+            "ln_ml_sigma": [np.sqrt(params_calen_20["ln_ml"][1]), np.sqrt(params_calen_25["ln_ml"][1]), np.sqrt(params_hydro_20["ln_ml"][1])],
+            "ln_ml_m": [params_calen_20["ln_ml"][0], params_calen_25["ln_ml"][0], params_hydro_20["ln_ml"][0]],
+            "gumbel_alpha": [params_calen_20["gumbel"][1], params_calen_25["gumbel"][1], params_hydro_20["gumbel"][1]],
+            "gumbel_u": [params_calen_20["gumbel"][0], params_calen_25["gumbel"][0], params_hydro_20["gumbel"][0]],
+        })
+        params_df.to_excel(writer, sheet_name='Parameters', index=False)
+        calen_20.to_excel(writer, sheet_name='Calendar 2020', index=False)
+        calen_25.to_excel(writer, sheet_name='Calendar 2025', index=False)
+        hydro_20.to_excel(writer, sheet_name='Hydro 2020', index=False)
+        Q_calen_20.to_excel(writer, sheet_name='Return periods Calen 20', index=False)
+        Q_calen_25.to_excel(writer, sheet_name='Return periods Calen 25', index=False)
+        Q_hydro_20.to_excel(writer, sheet_name='Return periods Hydro 20', index=False)
+
 # Plotting
-if plots:
+if display_plots or save_plots:
     plotter("Hydro", "2020", "Lognormal: Moments")
     plotter("Hydro", "2020", "Lognormal: MaxLikelihood")
     plotter("Hydro", "2020", "Gumbel")
@@ -118,3 +183,45 @@ if plots:
     plotter("Calendar", "2025", "Lognormal: Moments")
     plotter("Calendar", "2025", "Lognormal: MaxLikelihood")
     plotter("Calendar", "2025", "Gumbel")
+    
+# Verbose output
+if verbose:
+    print("--------------------------------")
+    print("---------- Parameters ----------")
+    print("--------------------------------")
+    print("Calendar 2020:")
+    print(f"n: {params_calen_20['n']}")
+    print(f"ln_m: sigma = {np.sqrt(params_calen_20['ln_m'][1]):.4f}, m = {params_calen_20['ln_m'][0]:.4f}")
+    print(f"ln_ml: sigma = {np.sqrt(params_calen_20['ln_ml'][1]):.4f}, m = {params_calen_20['ln_ml'][0]:.4f}")
+    print(f"gumbel: alpha = {params_calen_20['gumbel'][1]:.4f}, u = {params_calen_20['gumbel'][0]:.4f}")
+    print()
+    print("Calendar 2025:")
+    print(f"n: {params_calen_25['n']}")
+    print(f"ln_m: sigma = {np.sqrt(params_calen_25['ln_m'][1]):.4f}, m = {params_calen_25['ln_m'][0]:.4f}")
+    print(f"ln_ml: sigma = {np.sqrt(params_calen_25['ln_ml'][1]):.4f}, m = {params_calen_25['ln_ml'][0]:.4f}")
+    print(f"gumbel: alpha = {params_calen_25['gumbel'][1]:.4f}, u = {params_calen_25['gumbel'][0]:.4f}")
+    print()
+    print("Hydro 2020:")
+    print(f"n: {params_hydro_20['n']}")
+    print(f"ln_m: sigma = {np.sqrt(params_hydro_20['ln_m'][1]):.4f}, m = {params_hydro_20['ln_m'][0]:.4f}")
+    print(f"ln_ml: sigma = {np.sqrt(params_hydro_20['ln_ml'][1]):.4f}, m = {params_hydro_20['ln_ml'][0]:.4f}")
+    print(f"gumbel: alpha = {params_hydro_20['gumbel'][1]:.4f}, u = {params_hydro_20['gumbel'][0]:.4f}")
+    print()
+    print("Max discharge 2021 (Calendar 2025):", Q_2021)
+    print()
+    print("--------------------------------")
+    print("------- Return periods ---------")
+    print("--------------------------------")
+    print("Calendar 2020:")
+    print(Q_calen_20)
+    print()
+    print("Calendar 2025:")
+    print(Q_calen_25)
+    print()
+    print("Hydro 2020:")
+    print(Q_hydro_20)
+    print()
+    print("--------------------------------")
+    print("--------- Test results ---------")
+    print("--------------------------------")
+    print("TODO")
