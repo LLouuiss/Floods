@@ -7,7 +7,7 @@ pd.options.mode.copy_on_write = True
 
 file_path = 'DGH_5962_Q_DayMean.xlsx'
 
-verbose = False
+verbose = True
 export_file = True
 display_plots = False
 save_plots = True
@@ -124,10 +124,72 @@ for df, params in [(calen_20, params_calen_20), (calen_25, params_calen_25), (hy
     df["i_over_n"] = (df.index + 1) / params["n"]
 
 # Kolmogorov-Smirnov test
-# TODO implémenter
+if verbose:
+    print("---------------------------------------------")
+    print("---------- Kolmogorov-Smirnov test ----------")
+    print("---------------------------------------------")
+# Maximun distance between empirical and theoretical CDF
+for df in [calen_20, calen_25, hydro_20]:
+    df["D_ln_m"] = np.abs(df["i_over_n"] - df["Lognormal: Moments"])
+    df["D_ln_ml"] = np.abs(df["i_over_n"] - df["Lognormal: MaxLikelihood"])
+    df["D_gumbel"] = np.abs(df["i_over_n"] - df["Gumbel"])
 
-# Chi-squared 4 class test
-# TODO implémenter
+# Find maximun distance for each distribution and dataset
+for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (calen_25, "Calendar 2025",params_calen_25), (hydro_20, "Hydro 2020",params_hydro_20)]:
+    D_ln_m_max = df["D_ln_m"].max()
+    D_ln_ml_max = df["D_ln_ml"].max()
+    D_gumbel_max = df["D_gumbel"].max()
+    C_10 = 1.22/np.sqrt(params["n"])  # alpha = 0.1
+    C_5= 1.36/np.sqrt(params["n"])   # alpha = 0.05
+    C_1 = 1.63/np.sqrt(params["n"])   # alpha = 0.01
+    if verbose:
+        print(f"Kolmogorov-Smirnov test - {name}:")
+        for dist, D_max in [("Lognormal: Moments", D_ln_m_max), ("Lognormal: MaxLikelihood", D_ln_ml_max), ("Gumbel", D_gumbel_max)]:
+            if D_max < C_1:
+                result = "Accept H0 at alpha = 0.01"
+            elif D_max < C_5:
+                result = "Accept H0 at alpha = 0.05"
+            elif D_max < C_10:
+                result = "Accept H0 at alpha = 0.1"
+            else:
+                result = "Reject H0 at alpha = 0.1"
+            print(f"  {dist}: D_max = {D_max:.4f}, {result}")
+            print()
+
+
+# Chi-squared 4 and 5 class test
+if verbose:
+    print("--------------------------------------")
+    print("---------- Chi-squared test ----------")
+    print("--------------------------------------")
+for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (calen_25, "Calendar 2025",params_calen_25), (hydro_20, "Hydro 2020",params_hydro_20)]:
+    for dist in ["Lognormal: Moments", "Lognormal: MaxLikelihood", "Gumbel"]:
+        for k in [4, 5]:
+            observed, bins = np.histogram(df["X_i"], bins=k)
+            expected_probs = [stat.lognorm.cdf(bins[i+1], s=np.sqrt(params["ln_m"][1]), scale=np.exp(params["ln_m"][0])) - stat.lognorm.cdf(bins[i], s=np.sqrt(params["ln_m"][1]), scale=np.exp(params["ln_m"][0])) for i in range(k)] if dist == "Lognormal: Moments" else \
+                            [stat.lognorm.cdf(bins[i+1], s=np.sqrt(params["ln_ml"][1]), scale=np.exp(params["ln_ml"][0])) - stat.lognorm.cdf(bins[i], s=np.sqrt(params["ln_ml"][1]), scale=np.exp(params["ln_ml"][0])) for i in range(k)] if dist == "Lognormal: MaxLikelihood" else \
+                            [stat.gumbel_r.cdf(bins[i+1], loc=params["gumbel"][0], scale=params["gumbel"][1]) - stat.gumbel_r.cdf(bins[i], loc=params["gumbel"][0], scale=params["gumbel"][1]) for i in range(k)]
+            expected = np.array(expected_probs) * params["n"]
+            chi2_stat = ((observed - expected)**2 / expected).sum()
+            dof = k - 1 - 2  # number of classes - 1 - number of estimated parameters
+            critical_value_5 = stat.chi2.ppf(0.95, dof)
+            critical_value_1 = stat.chi2.ppf(0.99, dof)
+            critical_value_10 = stat.chi2.ppf(0.90, dof)
+            #print(critical_value_5, critical_value_1, critical_value_10)
+            if verbose:
+                print(f"Chi-squared test {k} classes - {name} - {dist}:")
+                if chi2_stat < critical_value_1:
+                    result = "Accept H0 at alpha = 0.01"
+                elif chi2_stat < critical_value_5:
+                    result = "Accept H0 at alpha = 0.05"
+                elif chi2_stat < critical_value_10:
+                    result = "Accept H0 at alpha = 0.1"
+                else:
+                    result = "Reject H0 at alpha = 0.1"
+                print(f"  Chi2 stat = {chi2_stat:.4f}, dof = {dof}, {result}")
+                print()
+        
+
 
 # Return periods
 Q_2021 = calen_25["X_i"].max()
