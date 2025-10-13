@@ -44,7 +44,7 @@ def gumbel_params(data):
     return (u, alpha)
 
 def plotter(typeyear, endyear, method):
-    datas = {"Calendar 2020": calen_20, "Calendar 2025": calen_25, "Hydro 2020": hydro_20}
+    datas = {"Calendar 2020": calen_20, "Calendar 2025": calen_25, "Hydrological 2020": hydro_20}
     tickers = {"Lognormal: Moments": [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99, 0.995, 0.999],
                "Lognormal: MaxLikelihood": [0.001, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99, 0.995, 0.999],
                "Gumbel": [0.001, 0.01, 0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.97, 0.98, 0.99, 0.995, 0.997, 0.998, 0.999]
@@ -95,9 +95,10 @@ hydro_20 = hydro_25[hydro_25["HydroYear"] <= 2020]
 calen_25.drop(columns=["CalendarYear"], inplace=True)
 calen_20.drop(columns=["CalendarYear"], inplace=True)
 hydro_20.drop(columns=["HydroYear"], inplace=True)
+hydro_25.drop(columns=["HydroYear"], inplace=True)
 
 # Sorting by increasing discharge
-for df in [calen_25, calen_20, hydro_20]:
+for df in [calen_25, calen_20, hydro_20, hydro_25]:
     df.sort_values(by="X_i", inplace=True)
     df.reset_index(drop = True, inplace=True)
 
@@ -114,9 +115,13 @@ params_hydro_20 = {"n": len(hydro_20),
                    "ln_m": lognormal_moments_params(hydro_20),
                    "ln_ml": lognormal_max_likelihood_params(hydro_20),
                    "gumbel": gumbel_params(hydro_20)}
+params_hydro_25 = {"n": len(hydro_25),
+                   "ln_m": lognormal_moments_params(hydro_25),
+                   "ln_ml": lognormal_max_likelihood_params(hydro_25),
+                   "gumbel": gumbel_params(hydro_25)}
 
 # Computing CDFs & estimators
-for df, params in [(calen_20, params_calen_20), (calen_25, params_calen_25), (hydro_20, params_hydro_20)]:
+for df, params in [(calen_20, params_calen_20), (calen_25, params_calen_25), (hydro_20, params_hydro_20), (hydro_25, params_hydro_25)]:
     df["Lognormal: Moments"] = stat.lognorm.cdf(df["X_i"], s=np.sqrt(params["ln_m"][1]), scale=np.exp(params["ln_m"][0]))
     df["Lognormal: MaxLikelihood"] = stat.lognorm.cdf(df["X_i"], s=np.sqrt(params["ln_ml"][1]), scale=np.exp(params["ln_ml"][0]))
     df["Gumbel"] = stat.gumbel_r.cdf(df["X_i"], loc=params["gumbel"][0], scale=params["gumbel"][1])
@@ -128,14 +133,14 @@ if verbose:
     print("---------------------------------------------")
     print("---------- Kolmogorov-Smirnov test ----------")
     print("---------------------------------------------")
-# Maximun distance between empirical and theoretical CDF
-for df in [calen_20, calen_25, hydro_20]:
+# Distance between empirical and theoretical CDF
+for df in [calen_20, hydro_20]:
     df["D_ln_m"] = np.abs(df["i_over_n"] - df["Lognormal: Moments"])
     df["D_ln_ml"] = np.abs(df["i_over_n"] - df["Lognormal: MaxLikelihood"])
     df["D_gumbel"] = np.abs(df["i_over_n"] - df["Gumbel"])
 
 # Find maximun distance for each distribution and dataset
-for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (calen_25, "Calendar 2025",params_calen_25), (hydro_20, "Hydro 2020",params_hydro_20)]:
+for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (hydro_20, "Hydrological 2020",params_hydro_20)]:
     D_ln_m_max = df["D_ln_m"].max()
     D_ln_ml_max = df["D_ln_ml"].max()
     D_gumbel_max = df["D_gumbel"].max()
@@ -162,7 +167,7 @@ if verbose:
     print("--------------------------------------")
     print("---------- Chi-squared test ----------")
     print("--------------------------------------")
-for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (calen_25, "Calendar 2025",params_calen_25), (hydro_20, "Hydro 2020",params_hydro_20)]:
+for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (hydro_20, "Hydrological 2020",params_hydro_20)]:
     for dist in ["Lognormal: Moments", "Lognormal: MaxLikelihood", "Gumbel"]:
         for k in [4, 5]:
             observed, bins = np.histogram(df["X_i"], bins=k)
@@ -175,7 +180,6 @@ for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (calen_25,
             critical_value_5 = stat.chi2.ppf(0.95, dof)
             critical_value_1 = stat.chi2.ppf(0.99, dof)
             critical_value_10 = stat.chi2.ppf(0.90, dof)
-            #print(critical_value_5, critical_value_1, critical_value_10)
             if verbose:
                 print(f"Chi-squared test {k} classes - {name} - {dist}:")
                 if chi2_stat < critical_value_1:
@@ -198,7 +202,7 @@ Q_calen_20 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
 Q_calen_25 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
 Q_hydro_20 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
 
-for df, params, name in [(Q_calen_20, params_calen_20, "Calendar 2020"), (Q_calen_25, params_calen_25, "Calendar 2025"), (Q_hydro_20, params_hydro_20, "Hydro 2020")]:
+for df, params, name in [(Q_calen_20, params_calen_20, "Calendar 2020"), (Q_calen_25, params_calen_25, "Calendar 2025"), (Q_hydro_20, params_hydro_20, "Hydrological 2020")]:
     for Tr in [10, 100, 1000, 10000]:
         p = 1 - 1/Tr
         Q_ln_m = stat.lognorm.ppf(p, s=np.sqrt(params["ln_m"][1]), scale=np.exp(params["ln_m"][0]))
@@ -211,11 +215,12 @@ for df, params, name in [(Q_calen_20, params_calen_20, "Calendar 2020"), (Q_cale
     if (name == "Calendar 2020" or name == "Calendar 2025"):
         df.loc[len(df)] = ["T_r for Q_2021", Tr_2021_ln_m, Tr_2021_ln_ml, Tr_2021_gumbel]
 
+
 # Exporting results to a file
 if export_file:
     with pd.ExcelWriter('devoir2_results.xlsx') as writer:
         params_df = pd.DataFrame({
-            "Dataset": ["Calendar 2020", "Calendar 2025", "Hydro 2020"],
+            "Dataset": ["Calendar 2020", "Calendar 2025", "Hydrological 2020"],
             "n": [params_calen_20["n"], params_calen_25["n"], params_hydro_20["n"]],
             "ln_m_sigma": [np.sqrt(params_calen_20["ln_m"][1]), np.sqrt(params_calen_25["ln_m"][1]), np.sqrt(params_hydro_20["ln_m"][1])],
             "ln_m_m": [params_calen_20["ln_m"][0], params_calen_25["ln_m"][0], params_hydro_20["ln_m"][0]],
@@ -227,16 +232,16 @@ if export_file:
         params_df.to_excel(writer, sheet_name='Parameters', index=False)
         calen_20.to_excel(writer, sheet_name='Calendar 2020', index=False)
         calen_25.to_excel(writer, sheet_name='Calendar 2025', index=False)
-        hydro_20.to_excel(writer, sheet_name='Hydro 2020', index=False)
+        hydro_20.to_excel(writer, sheet_name='Hydrological 2020', index=False)
         Q_calen_20.to_excel(writer, sheet_name='Return periods Calen 20', index=False)
         Q_calen_25.to_excel(writer, sheet_name='Return periods Calen 25', index=False)
         Q_hydro_20.to_excel(writer, sheet_name='Return periods Hydro 20', index=False)
 
 # Plotting
 if display_plots or save_plots:
-    plotter("Hydro", "2020", "Lognormal: Moments")
-    plotter("Hydro", "2020", "Lognormal: MaxLikelihood")
-    plotter("Hydro", "2020", "Gumbel")
+    plotter("Hydrological", "2020", "Lognormal: Moments")
+    plotter("Hydrological", "2020", "Lognormal: MaxLikelihood")
+    plotter("Hydrological", "2020", "Gumbel")
 
     plotter("Calendar", "2020", "Lognormal: Moments")
     plotter("Calendar", "2020", "Lognormal: MaxLikelihood")
@@ -263,7 +268,7 @@ if verbose:
     print(f"ln_ml: sigma = {np.sqrt(params_calen_25['ln_ml'][1]):.4f}, m = {params_calen_25['ln_ml'][0]:.4f}")
     print(f"gumbel: alpha = {params_calen_25['gumbel'][1]:.4f}, u = {params_calen_25['gumbel'][0]:.4f}")
     print()
-    print("Hydro 2020:")
+    print("Hydrological 2020:")
     print(f"n: {params_hydro_20['n']}")
     print(f"ln_m: sigma = {np.sqrt(params_hydro_20['ln_m'][1]):.4f}, m = {params_hydro_20['ln_m'][0]:.4f}")
     print(f"ln_ml: sigma = {np.sqrt(params_hydro_20['ln_ml'][1]):.4f}, m = {params_hydro_20['ln_ml'][0]:.4f}")
@@ -283,7 +288,4 @@ if verbose:
     print("Hydro 2020:")
     print(Q_hydro_20)
     print()
-    print("--------------------------------")
-    print("--------- Test results ---------")
-    print("--------------------------------")
-    print("TODO")
+    
