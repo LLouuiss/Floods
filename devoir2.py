@@ -40,7 +40,7 @@ def lognormal_max_likelihood_params(data):
     
 def gumbel_params(data):
     alpha = np.sqrt(6) * data["X_i"].std(ddof=1) / np.pi
-    u = data["X_i"].mean() - 0.5772 / alpha
+    u = data["X_i"].mean() - 0.577 / alpha
     return (u, alpha)
 
 def plotter(typeyear, endyear, method):
