@@ -150,15 +150,21 @@ for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (hydro_20,
     if verbose:
         print(f"Kolmogorov-Smirnov test - {name}:")
         for dist, D_max in [("Lognormal: Moments", D_ln_m_max), ("Lognormal: MaxLikelihood", D_ln_ml_max), ("Gumbel", D_gumbel_max)]:
-            if D_max < C_1:
-                result = "Accept H0 at alpha = 0.01"
-            elif D_max < C_5:
-                result = "Accept H0 at alpha = 0.05"
-            elif D_max < C_10:
+            c= None
+            if D_max < C_10:
                 result = "Accept H0 at alpha = 0.1"
+                c = C_10
+                print(f"  {dist}: D_max = {D_max:.4f} < {c}, {result}")
+            #elif D_max < C_5:
+            #    result = "Accept H0 at alpha = 0.05"
+            #    c = C_5
+            #elif D_max < C_1:
+            #    result = "Accept H0 at alpha = 0.01"
+            #    c = C_1
             else:
                 result = "Reject H0 at alpha = 0.1"
-            print(f"  {dist}: D_max = {D_max:.4f}, {result}")
+                c= C_10
+                print(f"  {dist}: D_max = {D_max:.4f} < {c}, {result}")
             print()
 
 
@@ -181,16 +187,23 @@ for df, name, params in [(calen_20, "Calendar 2020",params_calen_20), (hydro_20,
             critical_value_1 = stat.chi2.ppf(0.99, dof)
             critical_value_10 = stat.chi2.ppf(0.90, dof)
             if verbose:
+                c = None
                 print(f"Chi-squared test {k} classes - {name} - {dist}:")
-                if chi2_stat < critical_value_1:
-                    result = "Accept H0 at alpha = 0.01"
-                elif chi2_stat < critical_value_5:
+                if chi2_stat < critical_value_5:
                     result = "Accept H0 at alpha = 0.05"
-                elif chi2_stat < critical_value_10:
-                    result = "Accept H0 at alpha = 0.1"
+                    c = critical_value_5
+                    print(f"  Chi2 stat = {chi2_stat:.4f} < {c}, dof = {dof}, {result}")
+                #elif chi2_stat < critical_value_1:
+                #    result = "Accept H0 at alpha = 0.01"
+                #    c = critical_value_1
+                #elif chi2_stat < critical_value_10:
+                #    result = "Accept H0 at alpha = 0.1"
+                #    c = critical_value_10
                 else:
-                    result = "Reject H0 at alpha = 0.1"
-                print(f"  Chi2 stat = {chi2_stat:.4f}, dof = {dof}, {result}")
+                    result = "Reject H0 at alpha = 0.05"
+                    c = critical_value_5
+                    print(f"  Chi2 stat = {chi2_stat:.4f} < {c}, dof = {dof}, {result}")
+                #print(f"  Chi2 stat = {chi2_stat:.4f} < {c}, dof = {dof}, {result}")
                 print()
         
 
