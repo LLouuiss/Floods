@@ -39,7 +39,7 @@ def lognormal_max_likelihood_params(data):
     return (m_lnY, sigma2_lnQ)
     
 def gumbel_params(data):
-    alpha = np.sqrt(6) * data["X_i"].std(ddof=1) / np.pi
+    alpha = (np.pi / (np.sqrt(6) * data["X_i"].std(ddof=1)))**(1)
     u = data["X_i"].mean() - 0.577 / alpha
     return (u, alpha)
 
@@ -60,7 +60,7 @@ def plotter(typeyear, endyear, method):
 
     plt.figure(figsize=(8,6))
     plt.plot(data["X_i"], mapper(data["Weibull"]), marker='o', markersize=5, linestyle='', label='Empirical CDF (Weibull estimator)')
-    plt.plot(data["X_i"], mapper(data[method]), label='Lognormal CDF', color='red')
+    plt.plot(data["X_i"], mapper(data[method]), label=method+' CDF', color='red')
     plt.yticks(ticks, ticks_label)
     plt.xlabel('Q [m³/s]')
     plt.ylabel('CDF')
@@ -124,7 +124,7 @@ params_hydro_25 = {"n": len(hydro_25),
 for df, params in [(calen_20, params_calen_20), (calen_25, params_calen_25), (hydro_20, params_hydro_20), (hydro_25, params_hydro_25)]:
     df["Lognormal: Moments"] = stat.lognorm.cdf(df["X_i"], s=np.sqrt(params["ln_m"][1]), scale=np.exp(params["ln_m"][0]))
     df["Lognormal: MaxLikelihood"] = stat.lognorm.cdf(df["X_i"], s=np.sqrt(params["ln_ml"][1]), scale=np.exp(params["ln_ml"][0]))
-    df["Gumbel"] = stat.gumbel_r.cdf(df["X_i"], loc=params["gumbel"][0], scale=params["gumbel"][1])
+    df["Gumbel"] = stat.gumbel_r.cdf(df["X_i"], loc=params["gumbel"][0], scale=1/params["gumbel"][1])
     df["Weibull"] = (df.index + 0.5) / params["n"]
     df["i_over_n"] = (df.index + 1) / params["n"]
 
