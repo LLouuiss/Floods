@@ -7,8 +7,8 @@ pd.options.mode.copy_on_write = True
 
 file_path = 'DGH_5962_Q_DayMean.xlsx'
 
-verbose = True
-export_file = True
+verbose = False
+export_file = False
 display_plots = False
 save_plots = True
 
@@ -45,7 +45,7 @@ def plotter(typeyear, endyear, method):
     mapper = mappers[method]
     ticks = mapper(ticks_label)
 
-    plt.figure(figsize=(6,5))
+    plt.figure(figsize=(5,5))
     plt.plot(data["X_i"], mapper(data["Weibull"]), marker='o', markersize=5, linestyle='', label='Empirical CDF (Weibull estimator)')
     if method == "Gumbel":
         plt.plot(data["X_i"], mapper(data["Gumbel"]), label='Gumbel CDF', color='red')
@@ -62,7 +62,7 @@ def plotter(typeyear, endyear, method):
     plt.title(title)
     plt.tight_layout()
     if save_plots:
-        plt.savefig("devoir2_plots/" + title.replace(" ", "_").replace(":", "") + ".pdf", dpi=300, bbox_inches='tight')
+        plt.savefig("devoir2_plots/" + title.replace(" ", "_").replace(":", "") + ".pdf", dpi=720, bbox_inches='tight')
     if display_plots:
         plt.show()
 
@@ -233,6 +233,27 @@ if display_plots or save_plots:
 
     plotter("Calendar", "2025", "Lognormal")
     plotter("Calendar", "2025", "Gumbel")
+
+    plt.figure(figsize=(7,5))
+    plt.plot(Q_calen_20["Q_ln_m"][:4], Q_calen_20["Tr"][:4], '.-', color='blue', label='Lognormal (Moments) 2020')
+    plt.plot(Q_calen_20["Q_ln_ml"][:4], Q_calen_20["Tr"][:4], '.-', color='orange', label='Lognormal (Max Likelihood) 2020')
+    plt.plot(Q_calen_20["Q_gumbel"][:4], Q_calen_20["Tr"][:4], '.-', color='green', label='Gumbel 2020')
+    plt.plot(Q_calen_25["Q_ln_m"][:4], Q_calen_25["Tr"][:4], '.--', color='blue', label='Lognormal (Moments) 2025')
+    plt.plot(Q_calen_25["Q_ln_ml"][:4], Q_calen_25["Tr"][:4], '.--', color='orange', label='Lognormal (Max Likelihood) 2025')
+    plt.plot(Q_calen_25["Q_gumbel"][:4], Q_calen_25["Tr"][:4], '.--', color='green', label='Gumbel 2025')
+    plt.hlines(Q_2021, xmin=min(Q_calen_20["Q_ln_ml"][:4]), xmax=max(Q_calen_25["Q_ln_m"][:4]), colors='red', linestyles='dotted', label=f'Max discharge 2021 = {Q_2021:.2f} m³/s')
+    plt.yscale('log')
+    plt.title("Return Periods")
+    plt.xlabel("Discharge [m³/s]")
+    plt.ylabel("Return Period [years]")
+    plt.legend()
+    plt.tight_layout()
+    plt.grid()
+    if save_plots:
+        plt.savefig("devoir2_plots/Return_Periods.pdf", dpi=720, bbox_inches='tight')
+    if display_plots:
+        plt.show()
+
     
 # Verbose output
 if verbose:
