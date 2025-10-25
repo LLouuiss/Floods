@@ -45,7 +45,7 @@ def plotter(typeyear, endyear, method):
     mapper = mappers[method]
     ticks = mapper(ticks_label)
 
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(6,5))
     plt.plot(data["X_i"], mapper(data["Weibull"]), marker='o', markersize=5, linestyle='', label='Empirical CDF (Weibull estimator)')
     if method == "Gumbel":
         plt.plot(data["X_i"], mapper(data["Gumbel"]), label='Gumbel CDF', color='red')
@@ -60,8 +60,9 @@ def plotter(typeyear, endyear, method):
     plt.grid()
     title = method + " - 1979-" + endyear + " - " + typeyear
     plt.title(title)
+    plt.tight_layout()
     if save_plots:
-        plt.savefig("devoir2_plots/" + title.replace(" ", "_").replace(":", "") + ".pdf", dpi=300)
+        plt.savefig("devoir2_plots/" + title.replace(" ", "_").replace(":", "") + ".pdf", dpi=300, bbox_inches='tight')
     if display_plots:
         plt.show()
 
