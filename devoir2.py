@@ -8,7 +8,7 @@ pd.options.mode.copy_on_write = True
 file_path = 'DGH_5962_Q_DayMean.xlsx'
 
 verbose = False
-export_file = False
+export_file = True
 display_plots = False
 save_plots = True
 
@@ -24,7 +24,7 @@ def lognormal_moments_params(data):
 
 def lognormal_max_likelihood_params(data):
     m_lnY = np.log(data["X_i"]).mean()
-    sigma2_lnQ = np.log(data["X_i"]).var(ddof=1)  #non biaisé
+    sigma2_lnQ = np.log(data["X_i"]).var()
     return {"m_lnY": m_lnY, "sigma2_lnQ": sigma2_lnQ}
     
 def gumbel_params(data):
