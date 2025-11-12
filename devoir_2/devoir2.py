@@ -187,7 +187,7 @@ Q_calen_25 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
 Q_hydro_20 = pd.DataFrame(columns=["Tr", "Q_ln_m", "Q_ln_ml", "Q_gumbel"])
 
 for df, params, name in [(Q_calen_20, params_calen_20, "Calendar 2020"), (Q_calen_25, params_calen_25, "Calendar 2025"), (Q_hydro_20, params_hydro_20, "Hydrological 2020")]:
-    for Tr in [10, 100, 1000, 10000]:
+    for Tr in [10, 100, 1000, 10000,25]:
         p = 1 - 1/Tr
         Q_ln_m = stat.lognorm.ppf(p, s=np.sqrt(params["ln_m"]["sigma2_lnQ"]), scale=np.exp(params["ln_m"]["m_lnY"]))
         Q_ln_ml = stat.lognorm.ppf(p, s=np.sqrt(params["ln_ml"]["sigma2_lnQ"]), scale=np.exp(params["ln_ml"]["m_lnY"]))
@@ -250,7 +250,7 @@ if display_plots or save_plots:
     plt.tight_layout()
     plt.grid()
     if save_plots:
-        plt.savefig("devoir2_plots/Return_Periods.pdf", dpi=720, bbox_inches='tight')
+        plt.savefig("plots/Return_Periods.pdf", dpi=720, bbox_inches='tight')
     if display_plots:
         plt.show()
 
