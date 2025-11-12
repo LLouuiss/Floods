@@ -62,7 +62,7 @@ def plotter(typeyear, endyear, method):
     plt.title(title)
     plt.tight_layout()
     if save_plots:
-        plt.savefig("devoir2_plots/" + title.replace(" ", "_").replace(":", "") + ".pdf", dpi=720, bbox_inches='tight')
+        plt.savefig("plots/" + title.replace(" ", "_").replace(":", "") + ".pdf", dpi=720, bbox_inches='tight')
     if display_plots:
         plt.show()
 
